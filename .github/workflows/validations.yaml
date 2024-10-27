@@ -1,0 +1,35 @@
+name: "Validations"
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+
+jobs:
+
+  Static-Analysis:
+    name: "Static analysis"
+    runs-on: ubuntu-22.04
+    steps:
+    - uses: actions/checkout@eef61447b9ff4aafe5dcd4e0bbf5d482be7e7871 #v4.0.0
+
+    - name: Bootstrap environment
+      uses: ./.github/actions/bootstrap
+
+    - name: Run static analysis
+      run: make static-analysis
+
+  Unit-Test:
+    name: "Unit tests"
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@eef61447b9ff4aafe5dcd4e0bbf5d482be7e7871 #v4.0.0
+
+      - name: Bootstrap environment
+        uses: ./.github/actions/bootstrap
+
+      - name: Run static-analysis tests
+        run: make static-analysis
+
+      - uses: actions/upload-artifact@v4
+        run: make test 

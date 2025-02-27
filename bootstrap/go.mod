@@ -12,7 +12,7 @@ require (
 	github.com/joho/godotenv v1.5.1
 	github.com/khulnasoft/superkit v0.0.0-20250227173556-624132c63837
 	github.com/mattn/go-sqlite3 v1.14.22
-	golang.org/x/crypto v0.24.0
+	golang.org/x/crypto v0.31.0
 	gorm.io/driver/sqlite v1.5.6
 	gorm.io/gorm v1.25.10
 )

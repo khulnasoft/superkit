@@ -7,14 +7,14 @@ go 1.22.4
 
 require (
 	github.com/a-h/templ v0.2.731
-	github.com/khulnasoft/superkit v0.0.0-20240622052611-30be5bb82e0d
+	github.com/khulnasoft/superkit v0.0.0-20250227173556-624132c63837 // indirect
 	github.com/go-chi/chi/v5 v5.0.14
 	github.com/golang-jwt/jwt/v5 v5.2.1
 	github.com/google/uuid v1.6.0
 	github.com/joho/godotenv v1.5.1
 	github.com/mattn/go-sqlite3 v1.14.22
 	golang.org/x/crypto v0.24.0
-	gorm.io/superkitr/sqlite v1.5.6
+	gorm.io/driver/sqlite v1.5.6
 	gorm.io/gorm v1.25.10
 )
 

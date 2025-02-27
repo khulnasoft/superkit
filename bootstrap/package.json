@@ -10,6 +10,6 @@
   "license": "ISC",
   "devDependencies": {
     "tailwindcss": "^3.4.3",
-    "esbuild": "^0.21.5"
+    "esbuild": "^0.25.0"
   }
 }

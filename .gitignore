@@ -21,6 +21,7 @@ coverage.txt
 # Output of the go coverage tool, specifically when used with LiteIDE
 *.out
 /tmp
+.tmp/*
 /build
 /_vendor*
 /vendor

@@ -3,7 +3,7 @@ module github.com/khulnasoft/superkit
 go 1.23.4
 
 require (
-	github.com/a-h/templ v0.3.833
+	github.com/a-h/templ v0.3.856
 	github.com/gorilla/sessions v1.4.0
 	github.com/joho/godotenv v1.5.1
 	github.com/stretchr/testify v1.10.0

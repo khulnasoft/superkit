@@ -21,6 +21,12 @@ func Emit(topic string, event any) {
 	stream.emit(topic, event)
 }
 
+// EmitWithRetry dispatches the event and retries any panic-ing handler up to the
+// requested number of attempts with a bounded delay between retries.
+func EmitWithRetry(topic string, event any, retries int, delay time.Duration) {
+	stream.emitWithRetry(topic, event, retries, delay)
+}
+
 // Subscribe a HandlerFunc to the given topic.
 // A Subscription is being returned that can be used
 // to unsubscribe from the topic.
@@ -43,6 +49,8 @@ var stream *eventStream
 type event struct {
 	topic   string
 	message any
+	retries int
+	delay   time.Duration
 }
 
 // Subscription represents a handler subscribed to a specific topic.
@@ -97,10 +105,33 @@ func (e *eventStream) worker(ctx context.Context, id int) {
 					case <-e.workerQuitch:
 						return
 					default:
-						sub.Fn(ctx, evt.message)
+						runWithRetry(ctx, sub.Fn, evt.message, evt.retries, evt.delay)
 					}
 				}
 			}
+		}
+	}
+}
+
+func runWithRetry(ctx context.Context, fn HandlerFunc, value any, retries int, delay time.Duration) {
+	if retries < 0 {
+		retries = 0
+	}
+	for attempt := 0; attempt <= retries; attempt++ {
+		panicRecovered := false
+		func() {
+			defer func() {
+				if recovered := recover(); recovered != nil {
+					panicRecovered = true
+					if attempt < retries && delay > 0 {
+						time.Sleep(delay)
+					}
+				}
+			}()
+			fn(ctx, value)
+		}()
+		if !panicRecovered {
+			return
 		}
 	}
 }
@@ -110,10 +141,16 @@ func (e *eventStream) stop() {
 }
 
 func (e *eventStream) emit(topic string, v any) {
+	e.emitWithRetry(topic, v, 0, 0)
+}
+
+func (e *eventStream) emitWithRetry(topic string, v any, retries int, delay time.Duration) {
 	select {
 	case e.eventch <- event{
 		topic:   topic,
 		message: v,
+		retries: retries,
+		delay:   delay,
 	}:
 	default:
 		e.mu.Lock()

@@ -1,14 +1,14 @@
 package ui
 
 import (
-	"fmt"
+	"strings"
 
 	"github.com/a-h/templ"
 )
 
 func CreateAttrs(baseClass string, defaultClass string, opts ...func(*templ.Attributes)) templ.Attributes {
 	attrs := templ.Attributes{
-		"class": baseClass + " " + defaultClass,
+		"class": Merge(baseClass, defaultClass),
 	}
 	for _, o := range opts {
 		o(&attrs)
@@ -17,16 +17,19 @@ func CreateAttrs(baseClass string, defaultClass string, opts ...func(*templ.Attr
 }
 
 func Merge(a, b string) string {
-	return fmt.Sprintf("%s %s", a, b)
+	parts := []string{}
+	for _, part := range []string{a, b} {
+		trimmed := strings.TrimSpace(part)
+		if trimmed != "" {
+			parts = append(parts, trimmed)
+		}
+	}
+	return strings.Join(parts, " ")
 }
 
 func Class(class string) func(*templ.Attributes) {
 	return func(attrs *templ.Attributes) {
 		current, _ := (*attrs)["class"].(string)
-		if current == "" {
-			(*attrs)["class"] = class
-			return
-		}
-		(*attrs)["class"] = current + " " + class
+		(*attrs)["class"] = Merge(current, class)
 	}
 }

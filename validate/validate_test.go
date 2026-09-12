@@ -288,6 +288,25 @@ func TestValidateJSONRequest(t *testing.T) {
 	assert.Equal(t, 30, data.Age)
 }
 
+func TestRequiredAcceptsScalarValues(t *testing.T) {
+	type Form struct {
+		Name    string
+		Age     int
+		Enabled bool
+	}
+
+	form := Form{Name: "Ada", Age: 42, Enabled: true}
+	schema := Schema{
+		"Name":    Rules(Required),
+		"Age":     Rules(Required),
+		"Enabled": Rules(Required),
+	}
+
+	errors, ok := Validate(form, schema)
+	assert.True(t, ok)
+	assert.Empty(t, errors)
+}
+
 func TestMergeSchemas(t *testing.T) {
 	expected := Schema{
 		"Name":      Rules(),

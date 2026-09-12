@@ -14,14 +14,20 @@ func TestCreateAttrsAndClass(t *testing.T) {
 
 	var opts []func(*templ.Attributes)
 	attrs = CreateAttrs("base", "", opts...)
-	if got := attrs["class"]; got != "base " {
-		t.Fatalf("class = %q; want %q", got, "base ")
+	if got := attrs["class"]; got != "base" {
+		t.Fatalf("class = %q; want %q", got, "base")
 	}
 }
 
 func TestMerge(t *testing.T) {
 	if got := Merge("first", "second"); got != "first second" {
 		t.Fatalf("Merge() = %q; want %q", got, "first second")
+	}
+	if got := Merge("", "second"); got != "second" {
+		t.Fatalf("Merge() = %q; want %q", got, "second")
+	}
+	if got := Merge("first", ""); got != "first" {
+		t.Fatalf("Merge() = %q; want %q", got, "first")
 	}
 }
 

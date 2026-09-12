@@ -106,11 +106,24 @@ var Required = RuleSet{
 		return "is a required field"
 	},
 	ValidateFunc: func(rule RuleSet) bool {
-		str, ok := rule.FieldValue.(string)
-		if !ok {
+		switch value := rule.FieldValue.(type) {
+		case string:
+			return len(value) > 0
+		case bool:
+			return true
+		case int, int8, int16, int32, int64:
+			return true
+		case uint, uint8, uint16, uint32, uint64:
+			return true
+		case float32, float64:
+			return true
+		case []byte:
+			return len(value) > 0
+		case nil:
 			return false
+		default:
+			return !reflect.ValueOf(rule.FieldValue).IsZero()
 		}
-		return len(str) > 0
 	},
 }
 

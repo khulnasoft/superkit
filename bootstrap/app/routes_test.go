@@ -5,6 +5,8 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/khulnasoft/superkit/bootstrap/app/conf"
+	"github.com/khulnasoft/superkit/bootstrap/app/db"
 	"github.com/khulnasoft/superkit/bootstrap/app/views/errors"
 	"github.com/khulnasoft/superkit/kit"
 	"github.com/stretchr/testify/assert"
@@ -45,4 +47,20 @@ func TestError404Component(t *testing.T) {
 func TestError500Component(t *testing.T) {
 	component := errors.Error500()
 	assert.NotNil(t, component)
+}
+
+func TestPreflightRequiresValidConfigAndDatabase(t *testing.T) {
+	assert.Error(t, Preflight(nil))
+	assert.Error(t, Preflight(&conf.Config{Listen: "localhost"}))
+}
+
+func TestPreflightPassesWhenDatabaseIsReady(t *testing.T) {
+	t.Setenv("DB_DRIVER", "sqlite3")
+	t.Setenv("DB_NAME", ":memory:")
+
+	err := db.Initialize()
+	assert.NoError(t, err)
+	defer func() { _ = db.Close() }()
+
+	assert.NoError(t, Preflight(&conf.Config{Listen: ":3000"}))
 }

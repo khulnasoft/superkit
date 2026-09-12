@@ -2,8 +2,10 @@ package conf
 
 import (
 	"fmt"
+	"net"
 	"os"
 	"strconv"
+	"strings"
 )
 
 type Config struct {
@@ -73,6 +75,13 @@ func (c *Config) Validate() error {
 		return fmt.Errorf("SUPERKIT_SECRET must be at least 32 characters, got %d", len(c.Secret))
 	}
 
+	if c.Listen == "" || c.Listen == ":" {
+		c.Listen = ":3000"
+	}
+	if !isValidListenAddress(c.Listen) {
+		return fmt.Errorf("invalid HTTP_LISTEN_ADDR: %q (must be a valid host:port, e.g. :3000 or 127.0.0.1:3000)", c.Listen)
+	}
+
 	switch c.DBDriver {
 	case "sqlite3":
 		if c.DBName == "" {
@@ -83,6 +92,34 @@ func (c *Config) Validate() error {
 	}
 
 	return nil
+}
+
+func isValidListenAddress(addr string) bool {
+	if addr == "" {
+		return false
+	}
+
+	if strings.HasPrefix(addr, ":") {
+		port := strings.TrimPrefix(addr, ":")
+		if port == "" {
+			return false
+		}
+		_, err := strconv.Atoi(port)
+		return err == nil && port != "0"
+	}
+
+	host, port, err := net.SplitHostPort(addr)
+	if err != nil {
+		return false
+	}
+	if host == "" || host == "0.0.0.0" || host == "127.0.0.1" || host == "localhost" || host == "::" || host == "[::]" {
+		// host is allowed to be empty for :port or to be a known bind host.
+	}
+	if port == "" {
+		return false
+	}
+	_, err = strconv.Atoi(port)
+	return err == nil
 }
 
 func getenv(key, fallback string) string {

@@ -22,16 +22,45 @@ type UserWithVerificationToken struct {
 	Token string
 }
 
+type Role string
+
+const (
+	RoleUser  Role = "user"
+	RoleAdmin Role = "admin"
+)
+
+var rolePermissions = map[Role][]string{
+	RoleUser:  {"profile:read", "profile:write"},
+	RoleAdmin: {"profile:read", "profile:write", "admin:access"},
+}
+
 type Auth struct {
 	UserID    uint
 	Email     string
 	FirstName string
 	LastName  string
 	LoggedIn  bool
+	Role      Role
 }
 
 func (auth Auth) Check() bool {
 	return auth.LoggedIn
+}
+
+func (auth Auth) HasRole(role Role) bool {
+	return auth.LoggedIn && auth.Role == role
+}
+
+func (auth Auth) Can(permission string) bool {
+	if !auth.LoggedIn {
+		return false
+	}
+	for _, allowed := range rolePermissions[auth.Role] {
+		if allowed == permission {
+			return true
+		}
+	}
+	return false
 }
 
 type User struct {
@@ -40,6 +69,7 @@ type User struct {
 	Email           string
 	FirstName       string
 	LastName        string
+	Role            Role
 	PasswordHash    string
 	EmailVerifiedAt sql.NullTime
 	CreatedAt       time.Time
@@ -55,6 +85,7 @@ func createUserFromFormValues(values SignupFormValues) (User, error) {
 		Email:        values.Email,
 		FirstName:    values.FirstName,
 		LastName:     values.LastName,
+		Role:         RoleUser,
 		PasswordHash: string(hash),
 	}
 	result := db.Get().Create(&user)

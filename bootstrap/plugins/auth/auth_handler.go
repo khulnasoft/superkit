@@ -148,6 +148,17 @@ func HandleEmailVerify(kit *kit.Kit) error {
 	return kit.Redirect(http.StatusSeeOther, "/login")
 }
 
+func HandleAdminIndex(kit *kit.Kit) error {
+	auth, ok := kit.Auth().(Auth)
+	if !ok || !auth.Check() {
+		return kit.Redirect(http.StatusSeeOther, "/login")
+	}
+	if !auth.Can("admin:access") {
+		return kit.Render(AdminAccessDenied())
+	}
+	return kit.Render(AdminIndex(AdminPageData{User: auth}))
+}
+
 func AuthenticateUser(kit *kit.Kit) (kit.Auth, error) {
 	auth := Auth{}
 	sess := kit.GetSession(userSessionName)
@@ -173,7 +184,7 @@ func AuthenticateUser(kit *kit.Kit) (kit.Auth, error) {
 	var user User
 	if err := db.Get().
 		Model(&User{}).
-		Select("id", "email", "first_name", "last_name").
+		Select("id", "email", "first_name", "last_name", "role").
 		First(&user, session.UserID).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
 			return auth, nil
@@ -187,5 +198,6 @@ func AuthenticateUser(kit *kit.Kit) (kit.Auth, error) {
 		Email:     user.Email,
 		FirstName: user.FirstName,
 		LastName:  user.LastName,
+		Role:      Role(user.Role),
 	}, nil
 }

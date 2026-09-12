@@ -1,11 +1,13 @@
 package validate
 
 import (
+	"encoding/json"
 	"fmt"
 	"maps"
 	"net/http"
 	"reflect"
 	"strconv"
+	"strings"
 	"unicode"
 )
 
@@ -120,7 +122,13 @@ func getFieldAndTagByName(v any, name string) any {
 
 func parseRequest(r *http.Request, v any) error {
 	contentType := r.Header.Get("Content-Type")
-	if contentType == "application/x-www-form-urlencoded" {
+	if strings.Contains(contentType, "application/json") {
+		if err := json.NewDecoder(r.Body).Decode(v); err != nil {
+			return fmt.Errorf("failed to parse json: %v", err)
+		}
+		return nil
+	}
+	if strings.Contains(contentType, "application/x-www-form-urlencoded") {
 		if err := r.ParseForm(); err != nil {
 			return fmt.Errorf("failed to parse form: %v", err)
 		}
@@ -175,7 +183,6 @@ func parseRequest(r *http.Request, v any) error {
 				return fmt.Errorf("unsupported kind %s", fieldVal.Kind())
 			}
 		}
-
 	}
 	return nil
 }

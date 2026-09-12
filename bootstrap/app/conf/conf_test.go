@@ -124,3 +124,13 @@ func TestLoadInvalidEnv(t *testing.T) {
 	_, err := Load()
 	assert.Error(t, err)
 }
+
+func TestLoadInvalidListenAddress(t *testing.T) {
+	os.Setenv("SUPERKIT_SECRET", "12345678901234567890123456789012")
+	os.Setenv("SUPERKIT_ENV", "development")
+	os.Setenv("HTTP_LISTEN_ADDR", "localhost")
+
+	_, err := Load()
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "HTTP_LISTEN_ADDR")
+}

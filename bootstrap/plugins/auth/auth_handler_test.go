@@ -1,6 +1,7 @@
 package auth
 
 import (
+	"context"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -76,6 +77,36 @@ func TestHandleLoginIndex(t *testing.T) {
 	}
 
 	err := HandleLoginIndex(k)
+	assert.NoError(t, err)
+	assert.Equal(t, http.StatusOK, w.Code)
+}
+
+func TestAuthRoleChecks(t *testing.T) {
+	admin := Auth{LoggedIn: true, Role: RoleAdmin}
+	user := Auth{LoggedIn: true, Role: RoleUser}
+
+	assert.True(t, admin.HasRole(RoleAdmin))
+	assert.True(t, admin.Can("admin:access"))
+	assert.True(t, user.Can("profile:read"))
+	assert.False(t, user.Can("admin:access"))
+	assert.False(t, Auth{}.HasRole(RoleUser))
+}
+
+func TestHandleAdminIndex(t *testing.T) {
+	req := httptest.NewRequest(http.MethodGet, "/admin", nil)
+	req = req.WithContext(context.WithValue(req.Context(), kit.AuthKey{}, Auth{
+		LoggedIn: true,
+		Email:    "admin@example.com",
+		Role:     RoleAdmin,
+	}))
+	w := httptest.NewRecorder()
+
+	k := &kit.Kit{
+		Response: w,
+		Request:  req,
+	}
+
+	err := HandleAdminIndex(k)
 	assert.NoError(t, err)
 	assert.Equal(t, http.StatusOK, w.Code)
 }

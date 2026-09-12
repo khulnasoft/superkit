@@ -19,23 +19,32 @@ import (
 )
 
 func main() {
+	if err := run(); err != nil {
+		fmt.Printf("fatal: %v\n", err)
+		os.Exit(1)
+	}
+}
+
+func run() error {
 	if err := godotenv.Load(); err != nil {
 		fmt.Printf("warning: could not load .env file: %v\n", err)
 	}
 
 	cfg, err := conf.Load()
 	if err != nil {
-		fmt.Printf("fatal: configuration error: %v\n", err)
-		os.Exit(1)
+		return fmt.Errorf("configuration error: %w", err)
 	}
 
 	kit.Setup()
 
 	if err := db.Initialize(); err != nil {
-		fmt.Printf("fatal: database initialization failed: %v\n", err)
-		os.Exit(1)
+		return fmt.Errorf("database initialization failed: %w", err)
 	}
 	defer db.Close()
+
+	if err := app.Preflight(cfg); err != nil {
+		return fmt.Errorf("preflight failed: %w", err)
+	}
 
 	router := chi.NewMux()
 
@@ -85,8 +94,10 @@ func main() {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 	if err := server.Shutdown(ctx); err != nil {
-		fmt.Printf("server shutdown error: %v\n", err)
+		return fmt.Errorf("server shutdown error: %w", err)
 	}
+
+	return nil
 }
 
 func staticDev() http.Handler {

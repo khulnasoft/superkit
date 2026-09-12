@@ -24,3 +24,19 @@ func TestMerge(t *testing.T) {
 		t.Fatalf("Merge() = %q; want %q", got, "first second")
 	}
 }
+
+func TestClassOptionMutatesAttributes(t *testing.T) {
+	attrs := CreateAttrs("base", "default")
+	Class("extra")(&attrs)
+	if got := attrs["class"]; got != "base default extra" {
+		t.Fatalf("class = %q; want %q", got, "base default extra")
+	}
+}
+
+func TestClassOptionHandlesEmptyAttributes(t *testing.T) {
+	attrs := templ.Attributes{}
+	Class("extra")(&attrs)
+	if got := attrs["class"]; got != "extra" {
+		t.Fatalf("class = %q; want %q", got, "extra")
+	}
+}

@@ -261,6 +261,33 @@ func TestValidate(t *testing.T) {
 	assert.Empty(t, errors)
 }
 
+func TestValidateJSONRequest(t *testing.T) {
+	body := `{"email":"foo@bar.com","password":"Password123!","age":30}`
+	req, err := http.NewRequest("POST", "http://foo.com", strings.NewReader(body))
+	assert.NoError(t, err)
+	req.Header.Set("Content-Type", "application/json")
+
+	type SignupData struct {
+		Email    string `json:"email"`
+		Password string `json:"password"`
+		Age      int    `json:"age"`
+	}
+
+	schema := Schema{
+		"Email":    Rules(Email),
+		"Password": Rules(Required, Min(8)),
+		"Age":      Rules(GTE(18)),
+	}
+
+	var data SignupData
+	errors, ok := Request(req, &data, schema)
+	assert.True(t, ok)
+	assert.Empty(t, errors)
+	assert.Equal(t, "foo@bar.com", data.Email)
+	assert.Equal(t, "Password123!", data.Password)
+	assert.Equal(t, 30, data.Age)
+}
+
 func TestMergeSchemas(t *testing.T) {
 	expected := Schema{
 		"Name":      Rules(),

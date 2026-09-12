@@ -22,8 +22,11 @@ func Merge(a, b string) string {
 
 func Class(class string) func(*templ.Attributes) {
 	return func(attrs *templ.Attributes) {
-		attr := *attrs
-		class := attr["class"].(string) + " " + class
-		attr["class"] = class
+		current, _ := (*attrs)["class"].(string)
+		if current == "" {
+			(*attrs)["class"] = class
+			return
+		}
+		(*attrs)["class"] = current + " " + class
 	}
 }

@@ -17,6 +17,20 @@ var (
 	initialized bool
 )
 
+// IsReady reports whether the database is initialized and responding to pings.
+func IsReady() bool {
+	if !initialized || dbInstance == nil {
+		return false
+	}
+
+	sqlDB, err := dbInstance.DB()
+	if err != nil {
+		return false
+	}
+
+	return sqlDB.Ping() == nil
+}
+
 // Get returns the instantiated DB instance. Panics if called before Initialize.
 func Get() *gorm.DB {
 	if !initialized {
@@ -37,6 +51,8 @@ func Initialize() error {
 
 	dbinst, err := db.NewSQL(config)
 	if err != nil {
+		initialized = false
+		dbInstance = nil
 		return err
 	}
 
@@ -45,9 +61,13 @@ func Initialize() error {
 	dbinst.SetConnMaxLifetime(30 * time.Minute)
 
 	if _, err := dbinst.Exec("PRAGMA journal_mode=WAL"); err != nil {
+		initialized = false
+		dbInstance = nil
 		return err
 	}
 	if _, err := dbinst.Exec("PRAGMA busy_timeout=5000"); err != nil {
+		initialized = false
+		dbInstance = nil
 		return err
 	}
 
@@ -57,10 +77,14 @@ func Initialize() error {
 			Conn: dbinst,
 		}))
 	default:
+		initialized = false
+		dbInstance = nil
 		return err
 	}
 
 	if err != nil {
+		initialized = false
+		dbInstance = nil
 		return err
 	}
 
@@ -79,5 +103,23 @@ func Close() error {
 		return err
 	}
 
+	initialized = false
+	dbInstance = nil
 	return sqlDB.Close()
+}
+
+func Migrate(models ...interface{}) error {
+	if !initialized || dbInstance == nil {
+		return nil
+	}
+	return dbInstance.AutoMigrate(models...)
+}
+
+func InTransaction(fn func(tx *gorm.DB) error) error {
+	if !initialized || dbInstance == nil {
+		return nil
+	}
+	return dbInstance.Transaction(func(tx *gorm.DB) error {
+		return fn(tx)
+	})
 }

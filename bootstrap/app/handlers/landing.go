@@ -1,7 +1,7 @@
 package handlers
 
 import (
-	"AABBCCDD/app/views/landing"
+	"github.com/khulnasoft/superkit/bootstrap/app/views/landing"
 
 	"github.com/khulnasoft/superkit/kit"
 )

@@ -22,12 +22,5 @@ func InitializeRoutes(router chi.Router) {
 
 		auth.Get("/signup", kit.Handler(HandleSignupIndex))
 		auth.Post("/signup", kit.Handler(HandleSignupCreate))
-
-	})
-
-	router.Group(func(auth chi.Router) {
-		auth.Use(kit.WithAuthentication(authConfig, true))
-		auth.Get("/profile", kit.Handler(HandleProfileShow))
-		auth.Put("/profile", kit.Handler(HandleProfileUpdate))
 	})
 }

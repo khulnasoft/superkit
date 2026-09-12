@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log"
 	"log/slog"
 	"net/http"
 	"os"
@@ -170,7 +169,7 @@ func Env() string {
 // a function scope won't work.
 func Setup() {
 	if err := godotenv.Load(); err != nil {
-		log.Fatal(err)
+		fmt.Printf("warning: could not load .env file: %v\n", err)
 	}
 	appSecret := os.Getenv("SUPERKIT_SECRET")
 	if len(appSecret) < 32 {

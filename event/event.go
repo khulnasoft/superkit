@@ -10,7 +10,13 @@ import (
 // HandlerFunc is the function being called when receiving an event.
 type HandlerFunc func(context.Context, any)
 
-// Emit and event to the given topic
+const (
+	eventChannelSize = 128
+	workerPoolSize   = 8
+)
+
+// Emit an event to the given topic. If the event channel is full, the
+// event is dropped to avoid blocking request handlers.
 func Emit(topic string, event any) {
 	stream.emit(topic, event)
 }
@@ -22,7 +28,7 @@ func Subscribe(topic string, h HandlerFunc) Subscription {
 	return stream.subscribe(topic, h)
 }
 
-// Unsubscribe unsubribes the given Subscription from its topic.
+// Unsubscribe unsubscribes the given Subscription from its topic.
 func Unsubscribe(sub Subscription) {
 	stream.unsubscribe(sub)
 }
@@ -47,32 +53,52 @@ type Subscription struct {
 }
 
 type eventStream struct {
-	mu      sync.RWMutex
-	subs    map[string][]Subscription
-	eventch chan event
-	quitch  chan struct{}
+	mu           sync.RWMutex
+	subs         map[string][]Subscription
+	eventch      chan event
+	quitch       chan struct{}
+	workerQuitch chan struct{}
+	dropped      int64
 }
 
 func newStream() *eventStream {
 	e := &eventStream{
-		subs:    make(map[string][]Subscription),
-		eventch: make(chan event, 128),
-		quitch:  make(chan struct{}),
+		subs:         make(map[string][]Subscription),
+		eventch:      make(chan event, eventChannelSize),
+		quitch:       make(chan struct{}),
+		workerQuitch: make(chan struct{}),
 	}
-	go e.start()
+	go e.startWorkers()
 	return e
 }
 
-func (e *eventStream) start() {
+func (e *eventStream) startWorkers() {
 	ctx := context.Background()
+	for i := 0; i < workerPoolSize; i++ {
+		go e.worker(ctx, i)
+	}
+	<-e.quitch
+	close(e.workerQuitch)
+}
+
+func (e *eventStream) worker(ctx context.Context, id int) {
+	_ = id
 	for {
 		select {
-		case <-e.quitch:
+		case <-e.workerQuitch:
 			return
-		case evt := <-e.eventch:
+		case evt, ok := <-e.eventch:
+			if !ok {
+				return
+			}
 			if handlers, ok := e.subs[evt.topic]; ok {
 				for _, sub := range handlers {
-					go sub.Fn(ctx, evt.message)
+					select {
+					case <-e.workerQuitch:
+						return
+					default:
+						sub.Fn(ctx, evt.message)
+					}
 				}
 			}
 		}
@@ -84,15 +110,21 @@ func (e *eventStream) stop() {
 }
 
 func (e *eventStream) emit(topic string, v any) {
-	e.eventch <- event{
+	select {
+	case e.eventch <- event{
 		topic:   topic,
 		message: v,
+	}:
+	default:
+		e.mu.Lock()
+		e.dropped++
+		e.mu.Unlock()
 	}
 }
 
 func (e *eventStream) subscribe(topic string, h HandlerFunc) Subscription {
-	e.mu.RLock()
-	defer e.mu.RUnlock()
+	e.mu.Lock()
+	defer e.mu.Unlock()
 
 	sub := Subscription{
 		CreatedAt: time.Now().UnixNano(),
@@ -110,8 +142,8 @@ func (e *eventStream) subscribe(topic string, h HandlerFunc) Subscription {
 }
 
 func (e *eventStream) unsubscribe(sub Subscription) {
-	e.mu.RLock()
-	defer e.mu.RUnlock()
+	e.mu.Lock()
+	defer e.mu.Unlock()
 
 	if _, ok := e.subs[sub.Topic]; ok {
 		e.subs[sub.Topic] = slices.DeleteFunc(e.subs[sub.Topic], func(e Subscription) bool {
@@ -120,6 +152,24 @@ func (e *eventStream) unsubscribe(sub Subscription) {
 	}
 	if len(e.subs[sub.Topic]) == 0 {
 		delete(e.subs, sub.Topic)
+	}
+}
+
+// Stats holds runtime metrics for the event system.
+type Stats struct {
+	Dropped  int64
+	QueueLen int
+	Workers  int
+}
+
+// Stats returns current event system metrics.
+func GetStats() Stats {
+	stream.mu.RLock()
+	defer stream.mu.RUnlock()
+	return Stats{
+		Dropped:  stream.dropped,
+		QueueLen: len(stream.eventch),
+		Workers:  workerPoolSize,
 	}
 }
 

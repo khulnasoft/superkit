@@ -33,7 +33,7 @@ func getContextValue[T any](ctx context.Context, key interface{}, defaultValue T
 //
 //	view.Auth(ctx)
 func Auth(ctx context.Context) kit.Auth {
-	return getContextValue(ctx, kit.AuthKey{}, kit.DefaultAuth{})
+	return getContextValue[kit.Auth](ctx, kit.AuthKey{}, kit.DefaultAuth{})
 }
 
 // URL is a view helper that returns the current URL.

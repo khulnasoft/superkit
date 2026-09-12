@@ -1,8 +1,8 @@
-# SUPERKIT 🚀
+# Superkit 🚀
 
 > **Build high-performance apps swiftly with minimal team resources in Go.**
 
-**SUPERKIT** is a full-stack web framework designed for speed and simplicity. It provides essential tools and libraries to help developers build modern web applications with ease.
+**Superkit** is a full-stack web framework designed for speed and simplicity. It provides essential tools and libraries to help developers build modern web applications with ease.
 
 ⚠️ **Currently in Experimental Phase**
 
@@ -36,23 +36,27 @@
 
 ## 📥 Installation
 
-Create a new **SUPERKIT** project with a single command:
+Create a new **Superkit** project with a single command:
 
 ```sh
-# Initialize a new SUPERKIT project
+# Initialize a new Superkit project
 go run github.com/khulnasoft/superkit@master [yourprojectname]
 
 # Navigate into your project
 cd [yourprojectname]
 
 # Install TailwindCSS & esbuild
-npm install
+cd bootstrap && npm install && cd ..
+
+# Copy environment configuration
+cp bootstrap/.env.example bootstrap/.env
+# Edit bootstrap/.env and set a secure SUPERKIT_SECRET (32+ characters)
 
 # Resolve Go dependencies
 go clean -modcache && go get -u ./...
 
 # Initialize database migrations (if authentication plugin is enabled)
-make db-up
+cd bootstrap && make db-up && cd ..
 ```
 
 ---
@@ -62,35 +66,54 @@ make db-up
 ### 📂 Project Structure
 
 ```
-├── bootstrap
+├── bootstrap           # Example application (runs with `make dev` from bootstrap/)
 │   ├── app
-│   │   ├── assets  # Static files (CSS, JS)
-│   │   ├── conf    # Configuration files
-│   │   ├── db      # Database migrations
-│   │   ├── events  # Custom event handlers
-│   │   ├── handlers # Request handlers (controllers)
-│   │   ├── types   # Data models and interfaces
-│   │   ├── views   # HTML templates
+│   │   ├── assets      # Static files (CSS, JS)
+│   │   ├── conf        # Configuration files
+│   │   ├── db          # Database migrations
+│   │   ├── events      # Custom event handlers
+│   │   ├── handlers    # Request handlers (controllers)
+│   │   ├── types       # Data models and interfaces
+│   │   ├── views       # HTML templates (Templ)
+│   │   ├── routes.go   # Route & middleware setup
+│   │   ├── events.go   # Event registration
+│   │   ├── db          # GORM/SQLite setup
+│   │   ├── public      # Embedded production assets
 │   ├── cmd
-│   │   ├── scripts # CLI commands & seed scripts
+│   │   ├── app         # Application entrypoint
+│   │   ├── scripts     # CLI commands & seed scripts
 │   ├── plugins
-│   │   ├── auth    # Authentication module
-├── public         # Public assets
-├── kit            # Core framework utilities
-├── validate       # Validation utilities
-├── view           # View engine utilities
-├── Makefile       # Build & run scripts
-├── go.mod         # Go dependencies
-├── README.md      # Project documentation
+│   │   ├── auth        # Authentication module
+│   ├── public          # Development static assets
+│   ├── Makefile        # Bootstrap build & run scripts
+│   ├── go.mod          # Bootstrap module dependencies
+├── kit                 # Core framework utilities
+├── db                  # Database connection utilities
+├── event               # Async event subscription & dispatch
+├── validate            # Validation utilities
+├── view                # View engine utilities
+├── ui                  # Reusable UI components
+├── Makefile            # Repository-level build & run scripts
+├── go.mod              # Framework module dependencies
+└── README.md           # Project documentation
 ```
 
 ---
 
 ### 🎮 Development Server
-Run the development server:
+
+Run the development server from the `bootstrap/` directory:
 ```sh
+cd bootstrap
 make dev
 ```
+
+This starts all development watchers: Templ (with live reload proxy), Air (Go rebuilds), TailwindCSS, and esbuild.
+
+> **Note**: On Windows (WSL2), you might need to run asset watchers separately:
+> ```sh
+> make watch-assets
+> ```
 
 ---
 
@@ -144,11 +167,15 @@ Create structured, reusable HTML fragments with Go templates.
 
 ## 🧪 Testing
 
-### Test Handlers
+### Test Framework Core
 ```sh
 make test
 ```
-➡️ Runs automated tests for controllers & business logic.
+
+### Test Bootstrap Application
+```sh
+make app-test
+```
 
 ---
 
@@ -156,9 +183,9 @@ make test
 
 Compile your application into a single binary:
 ```sh
-make build
+make app-build
 ```
-➡️ Creates a production-ready binary at `/bin/app_prod`.
+➡️ Creates a production-ready binary at `bootstrap/bin/app_prod`.
 
 Set the environment to **production**:
 ```sh

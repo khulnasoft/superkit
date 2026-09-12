@@ -11,11 +11,11 @@ ifeq ($(OS),Windows_NT)
 	--pattern "**/*.js" \
 	--pattern "**/*.css" \
 	--delay "100ms" \
-	--templ generate --notify-proxy
+	--cmd "go run github.com/a-h/templ/cmd/templ@v0.3.865 generate --notify-proxy"
 else
 	MAIN_PATH = tmp/bin/main
 	SYNC_ASSETS_COMMAND =	@go run github.com/cosmtrek/air@v1.51.0 \
-	--build.cmd "templ generate --notify-proxy" \
+	--build.cmd "go run github.com/a-h/templ/cmd/templ@v0.3.865 generate --notify-proxy" \
 	--build.bin "true" \
 	--build.delay "100" \
 	--build.exclude_dir "" \
@@ -29,10 +29,14 @@ endif
 # re-create _templ.txt files on change, then send reload event to browser. 
 # Default url: http://localhost:7331
 templ:
-	@templ generate --watch --proxy="http://localhost$(HTTP_LISTEN_ADDR)" --open-browser=false
+	@go run github.com/a-h/templ/cmd/templ@v0.3.865 generate --watch --proxy="http://localhost$(HTTP_LISTEN_ADDR)" --open-browser=false
+
+# run templ generation once (used as build prerequisite).
+generate:
+	@go run github.com/a-h/templ/cmd/templ@v0.3.865 generate
 
 # run air to detect any go file changes to re-build and re-run the server.
-server:
+server: generate
 	@go run github.com/cosmtrek/air@v1.51.0 \
 	--build.cmd "go build --tags dev -o ${MAIN_PATH} ./cmd/app/" --build.bin "${MAIN_PATH}" --build.delay "100" \
 	--build.exclude_dir "node_modules" \
@@ -60,11 +64,30 @@ dev:
 
 # build the application for production. This will compile your app
 # to a single binary with all its assets embedded.
-build:
-	@npx tailwindcss -i app/assets/app.css -o ./public/assets/styles.css
-	@npx esbuild app/assets/index.js --bundle --outdir=public/assets
-	@go build -o bin/app_prod cmd/app/main.go
+build: generate
+ifeq ($(OS),Windows_NT)
+	@if exist node_modules (
+		npx tailwindcss -i app/assets/app.css -o ./public/assets/styles.css &&
+		npx esbuild app/assets/index.js --bundle --outdir=public/assets
+	) else (
+		echo "node_modules not found, skipping asset build (using embedded public/ assets)"
+	)
+else
+	@if [ -d "node_modules" ]; then \
+		npx tailwindcss -i app/assets/app.css -o ./public/assets/styles.css && \
+		npx esbuild app/assets/index.js --bundle --outdir=public/assets; \
+	else \
+		echo "node_modules not found, skipping asset build (using embedded public/ assets)"; \
+	fi
+endif
+	@go build -o bin/app_prod ./cmd/app/
 	@echo "compiled you application with all its assets to a single binary => bin/app_prod"
+
+# run tests for the bootstrap application
+test:
+	@go test -v ./...
+
+.PHONY: test templ generate server watch-assets watch-esbuild sync_assets dev build
 
 db-status:
 	@GOOSE_DRIVER=$(DB_DRIVER) GOOSE_DBSTRING=$(DB_NAME) go run github.com/pressly/goose/v3/cmd/goose@latest -dir=$(MIGRATION_DIR) status

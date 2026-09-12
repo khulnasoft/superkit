@@ -160,11 +160,11 @@ func TimeAfter(t time.Time) RuleSet {
 	return RuleSet{
 		Name: "timeAfter",
 		ValidateFunc: func(set RuleSet) bool {
-			t, ok := set.FieldValue.(time.Time)
+			value, ok := set.FieldValue.(time.Time)
 			if !ok {
 				return false
 			}
-			return t.After(t)
+			return value.After(t)
 		},
 		MessageFunc: func(set RuleSet) string {
 			return fmt.Sprintf("is not after %v", set.FieldValue)
@@ -176,11 +176,11 @@ func TimeBefore(t time.Time) RuleSet {
 	return RuleSet{
 		Name: "timeBefore",
 		ValidateFunc: func(set RuleSet) bool {
-			t, ok := set.FieldValue.(time.Time)
+			value, ok := set.FieldValue.(time.Time)
 			if !ok {
 				return false
 			}
-			return t.Before(t)
+			return value.Before(t)
 		},
 		MessageFunc: func(set RuleSet) string {
 			return fmt.Sprintf("is not before %v", set.FieldValue)

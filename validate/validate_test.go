@@ -108,6 +108,36 @@ func TestTime(t *testing.T) {
 	assert.False(t, ok)
 }
 
+func TestTimeAfter(t *testing.T) {
+	reference := time.Date(2026, time.January, 1, 12, 0, 0, 0, time.UTC)
+	type Foo struct{ CreatedAt time.Time }
+
+	_, ok := Validate(Foo{CreatedAt: reference.Add(time.Minute)}, Schema{
+		"createdAt": Rules(TimeAfter(reference)),
+	})
+	assert.True(t, ok)
+
+	_, ok = Validate(Foo{CreatedAt: reference}, Schema{
+		"createdAt": Rules(TimeAfter(reference)),
+	})
+	assert.False(t, ok)
+}
+
+func TestTimeBefore(t *testing.T) {
+	reference := time.Date(2026, time.January, 1, 12, 0, 0, 0, time.UTC)
+	type Foo struct{ CreatedAt time.Time }
+
+	_, ok := Validate(Foo{CreatedAt: reference.Add(-time.Minute)}, Schema{
+		"createdAt": Rules(TimeBefore(reference)),
+	})
+	assert.True(t, ok)
+
+	_, ok = Validate(Foo{CreatedAt: reference}, Schema{
+		"createdAt": Rules(TimeBefore(reference)),
+	})
+	assert.False(t, ok)
+}
+
 func TestURL(t *testing.T) {
 	type Foo struct {
 		URL string `v:"URL"`

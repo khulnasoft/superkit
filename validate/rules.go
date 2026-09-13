@@ -106,11 +106,24 @@ var Required = RuleSet{
 		return "is a required field"
 	},
 	ValidateFunc: func(rule RuleSet) bool {
-		str, ok := rule.FieldValue.(string)
-		if !ok {
+		switch value := rule.FieldValue.(type) {
+		case string:
+			return len(value) > 0
+		case bool:
+			return true
+		case int, int8, int16, int32, int64:
+			return true
+		case uint, uint8, uint16, uint32, uint64:
+			return true
+		case float32, float64:
+			return true
+		case []byte:
+			return len(value) > 0
+		case nil:
 			return false
+		default:
+			return !reflect.ValueOf(rule.FieldValue).IsZero()
 		}
-		return len(str) > 0
 	},
 }
 
@@ -160,11 +173,11 @@ func TimeAfter(t time.Time) RuleSet {
 	return RuleSet{
 		Name: "timeAfter",
 		ValidateFunc: func(set RuleSet) bool {
-			t, ok := set.FieldValue.(time.Time)
+			value, ok := set.FieldValue.(time.Time)
 			if !ok {
 				return false
 			}
-			return t.After(t)
+			return value.After(t)
 		},
 		MessageFunc: func(set RuleSet) string {
 			return fmt.Sprintf("is not after %v", set.FieldValue)
@@ -176,11 +189,11 @@ func TimeBefore(t time.Time) RuleSet {
 	return RuleSet{
 		Name: "timeBefore",
 		ValidateFunc: func(set RuleSet) bool {
-			t, ok := set.FieldValue.(time.Time)
+			value, ok := set.FieldValue.(time.Time)
 			if !ok {
 				return false
 			}
-			return t.Before(t)
+			return value.Before(t)
 		},
 		MessageFunc: func(set RuleSet) string {
 			return fmt.Sprintf("is not before %v", set.FieldValue)

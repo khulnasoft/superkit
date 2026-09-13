@@ -1,7 +1,7 @@
 package auth
 
 import (
-	"AABBCCDD/app/db"
+	"github.com/khulnasoft/superkit/bootstrap/app/db"
 	"database/sql"
 	"net/http"
 	"os"
@@ -148,6 +148,17 @@ func HandleEmailVerify(kit *kit.Kit) error {
 	return kit.Redirect(http.StatusSeeOther, "/login")
 }
 
+func HandleAdminIndex(kit *kit.Kit) error {
+	auth, ok := kit.Auth().(Auth)
+	if !ok || !auth.Check() {
+		return kit.Redirect(http.StatusSeeOther, "/login")
+	}
+	if !auth.Can("admin:access") {
+		return kit.Render(AdminAccessDenied())
+	}
+	return kit.Render(AdminIndex(AdminPageData{User: auth}))
+}
+
 func AuthenticateUser(kit *kit.Kit) (kit.Auth, error) {
 	auth := Auth{}
 	sess := kit.GetSession(userSessionName)
@@ -157,16 +168,36 @@ func AuthenticateUser(kit *kit.Kit) (kit.Auth, error) {
 	}
 
 	var session Session
-	err := db.Get().
-		Preload("User").
-		Find(&session, "token = ? AND expires_at > ?", token, time.Now()).Error
-	if err != nil || session.ID == 0 {
+	if err := db.Get().
+		Model(&Session{}).
+		Select("user_id").
+		First(&session, "token = ? AND expires_at > ?", token, time.Now()).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return auth, nil
+		}
+		return auth, err
+	}
+	if session.UserID == 0 {
 		return auth, nil
 	}
 
+	var user User
+	if err := db.Get().
+		Model(&User{}).
+		Select("id", "email", "first_name", "last_name", "role").
+		First(&user, session.UserID).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return auth, nil
+		}
+		return auth, err
+	}
+
 	return Auth{
-		LoggedIn: true,
-		UserID:   session.User.ID,
-		Email:    session.User.Email,
+		LoggedIn:  true,
+		UserID:    user.ID,
+		Email:     user.Email,
+		FirstName: user.FirstName,
+		LastName:  user.LastName,
+		Role:      Role(user.Role),
 	}, nil
 }

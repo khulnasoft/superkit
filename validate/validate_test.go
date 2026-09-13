@@ -108,6 +108,36 @@ func TestTime(t *testing.T) {
 	assert.False(t, ok)
 }
 
+func TestTimeAfter(t *testing.T) {
+	reference := time.Date(2026, time.January, 1, 12, 0, 0, 0, time.UTC)
+	type Foo struct{ CreatedAt time.Time }
+
+	_, ok := Validate(Foo{CreatedAt: reference.Add(time.Minute)}, Schema{
+		"createdAt": Rules(TimeAfter(reference)),
+	})
+	assert.True(t, ok)
+
+	_, ok = Validate(Foo{CreatedAt: reference}, Schema{
+		"createdAt": Rules(TimeAfter(reference)),
+	})
+	assert.False(t, ok)
+}
+
+func TestTimeBefore(t *testing.T) {
+	reference := time.Date(2026, time.January, 1, 12, 0, 0, 0, time.UTC)
+	type Foo struct{ CreatedAt time.Time }
+
+	_, ok := Validate(Foo{CreatedAt: reference.Add(-time.Minute)}, Schema{
+		"createdAt": Rules(TimeBefore(reference)),
+	})
+	assert.True(t, ok)
+
+	_, ok = Validate(Foo{CreatedAt: reference}, Schema{
+		"createdAt": Rules(TimeBefore(reference)),
+	})
+	assert.False(t, ok)
+}
+
 func TestURL(t *testing.T) {
 	type Foo struct {
 		URL string `v:"URL"`
@@ -227,6 +257,52 @@ func TestValidate(t *testing.T) {
 		Username: "pedropedro",
 	}
 	errors, ok := Validate(user, schema)
+	assert.True(t, ok)
+	assert.Empty(t, errors)
+}
+
+func TestValidateJSONRequest(t *testing.T) {
+	body := `{"email":"foo@bar.com","password":"Password123!","age":30}`
+	req, err := http.NewRequest("POST", "http://foo.com", strings.NewReader(body))
+	assert.NoError(t, err)
+	req.Header.Set("Content-Type", "application/json")
+
+	type SignupData struct {
+		Email    string `json:"email"`
+		Password string `json:"password"`
+		Age      int    `json:"age"`
+	}
+
+	schema := Schema{
+		"Email":    Rules(Email),
+		"Password": Rules(Required, Min(8)),
+		"Age":      Rules(GTE(18)),
+	}
+
+	var data SignupData
+	errors, ok := Request(req, &data, schema)
+	assert.True(t, ok)
+	assert.Empty(t, errors)
+	assert.Equal(t, "foo@bar.com", data.Email)
+	assert.Equal(t, "Password123!", data.Password)
+	assert.Equal(t, 30, data.Age)
+}
+
+func TestRequiredAcceptsScalarValues(t *testing.T) {
+	type Form struct {
+		Name    string
+		Age     int
+		Enabled bool
+	}
+
+	form := Form{Name: "Ada", Age: 42, Enabled: true}
+	schema := Schema{
+		"Name":    Rules(Required),
+		"Age":     Rules(Required),
+		"Enabled": Rules(Required),
+	}
+
+	errors, ok := Validate(form, schema)
 	assert.True(t, ok)
 	assert.Empty(t, errors)
 }

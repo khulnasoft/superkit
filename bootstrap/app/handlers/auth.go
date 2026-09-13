@@ -1,7 +1,7 @@
 package handlers
 
 import (
-	"AABBCCDD/app/types"
+	"github.com/khulnasoft/superkit/bootstrap/app/types"
 
 	"github.com/khulnasoft/superkit/kit"
 )

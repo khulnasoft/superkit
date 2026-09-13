@@ -1,7 +1,7 @@
 package auth
 
 import (
-	"AABBCCDD/app/db"
+	"github.com/khulnasoft/superkit/bootstrap/app/db"
 	"fmt"
 
 	"github.com/khulnasoft/superkit/kit"
@@ -24,16 +24,11 @@ type ProfileFormValues struct {
 func HandleProfileShow(kit *kit.Kit) error {
 	auth := kit.Auth().(Auth)
 
-	var user User
-	if err := db.Get().First(&user, auth.UserID).Error; err != nil {
-		return err
-	}
-
 	formValues := ProfileFormValues{
-		ID:        user.ID,
-		FirstName: user.FirstName,
-		LastName:  user.LastName,
-		Email:     user.Email,
+		ID:        auth.UserID,
+		FirstName: auth.FirstName,
+		LastName:  auth.LastName,
+		Email:     auth.Email,
 	}
 
 	return kit.Render(ProfileShow(formValues))
